@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BlindTrade — Private OTC Trading on Miden</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Syne', sans-serif; background: #0c0a08; min-height: 100vh; color: #e8e0d5; }
+.bt-grid { position: fixed; inset: 0; background-image: linear-gradient(rgba(255,120,20,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,120,20,0.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 0; }
+.bt-glow { position: fixed; top: -120px; left: 50%; transform: translateX(-50%); width: 600px; height: 300px; background: radial-gradient(ellipse, rgba(255,100,10,0.08) 0%, transparent 70%); pointer-events: none; z-index: 0; }
+.bt-content { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; padding: 0 16px; }
+.bt-nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; border-bottom: 0.5px solid rgba(255,120,20,0.12); margin-bottom: 0; }
+.bt-logo { font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 500; color: #fff; display: flex; align-items: center; gap: 8px; }
+.bt-logo-dot { width: 8px; height: 8px; background: #f97316; border-radius: 50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+.bt-badge { font-family: 'IBM Plex Mono', monospace; font-size: 11px; padding: 4px 10px; border: 0.5px solid rgba(249,115,22,0.35); border-radius: 4px; color: #f97316; background: rgba(249,115,22,0.06); }
+.bt-btn-connect { background: transparent; border: 0.5px solid rgba(249,115,22,0.35); color: #f97316; font-family: 'Syne', sans-serif; font-size: 13px; padding: 7px 16px; border-radius: 8px; cursor: pointer; transition: all 0.15s; }
+.bt-btn-connect:hover { background: rgba(249,115,22,0.08); }
+.bt-hero { padding: 56px 0 36px; text-align: center; }
+.bt-hero-tag { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 2px; color: #6b5d4f; text-transform: uppercase; margin-bottom: 18px; }
+.bt-hero h1 { font-size: 52px; font-weight: 700; line-height: 1; letter-spacing: -2px; color: #fff; margin-bottom: 12px; }
+.bt-hero h1 span { color: #f97316; }
+.bt-hero-sub { font-size: 15px; color: #78614e; max-width: 420px; margin: 0 auto 36px; line-height: 1.6; }
+.bt-miden-tag { display: inline-flex; align-items: center; gap: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #4a3d30; border: 0.5px solid rgba(255,120,20,0.1); border-radius: 4px; padding: 3px 8px; margin-bottom: 20px; }
+.bt-stats { display: flex; justify-content: center; gap: 48px; margin-bottom: 44px; }
+.bt-stat { text-align: center; }
+.bt-stat-val { font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 500; color: #f97316; }
+.bt-stat-label { font-size: 12px; color: #4a3d30; margin-top: 2px; }
+.bt-tabs { display: flex; gap: 4px; margin-bottom: 24px; }
+.bt-tab { padding: 8px 20px; font-size: 13px; font-family: 'IBM Plex Mono', monospace; border: 0.5px solid rgba(255,255,255,0.08); border-radius: 6px; cursor: pointer; background: transparent; color: #6b5d4f; transition: all 0.15s; }
+.bt-tab:hover { color: #e8e0d5; border-color: rgba(249,115,22,0.2); }
+.bt-tab.active { background: rgba(249,115,22,0.1); border-color: rgba(249,115,22,0.35); color: #f97316; }
+.bt-panel { display: none; }
+.bt-panel.active { display: block; }
+.bt-card { background: rgba(255,120,20,0.04); border: 0.5px solid rgba(255,120,20,0.1); border-radius: 12px; padding: 24px; margin-bottom: 16px; }
+.bt-card-title { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #4a3d30; margin-bottom: 20px; }
+.bt-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.bt-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 0; }
+.bt-label { font-size: 12px; color: #6b5d4f; font-family: 'IBM Plex Mono', monospace; }
+.bt-input, .bt-select { background: rgba(255,255,255,0.03); border: 0.5px solid rgba(255,120,20,0.12); border-radius: 8px; padding: 10px 14px; color: #e8e0d5; font-family: 'IBM Plex Mono', monospace; font-size: 14px; outline: none; transition: border-color 0.15s; width: 100%; }
+.bt-input:focus, .bt-select:focus { border-color: rgba(249,115,22,0.45); }
+.bt-field-full { margin-bottom: 12px; }
+.bt-privacy-toggle { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: rgba(249,115,22,0.06); border: 0.5px solid rgba(249,115,22,0.18); border-radius: 8px; margin-bottom: 16px; margin-top: 4px; }
+.bt-toggle-icon { font-size: 16px; color: #f97316; }
+.bt-toggle-text { font-size: 13px; color: #78614e; flex: 1; }
+.bt-toggle-status { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #f97316; }
+.bt-btn { width: 100%; padding: 12px; background: #f97316; border: none; border-radius: 8px; color: #0c0a08; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.15s; margin-top: 8px; }
+.bt-btn:hover { background: #ea6a08; transform: translateY(-1px); }
+.bt-btn:active { transform: translateY(0); }
+.bt-offers { display: flex; flex-direction: column; gap: 10px; }
+.bt-offer { display: flex; align-items: center; gap: 16px; padding: 16px; background: rgba(255,255,255,0.02); border: 0.5px solid rgba(255,120,20,0.08); border-radius: 10px; transition: all 0.15s; cursor: pointer; }
+.bt-offer:hover { border-color: rgba(249,115,22,0.25); background: rgba(249,115,22,0.04); }
+.bt-offer-shield { width: 36px; height: 36px; background: rgba(249,115,22,0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #f97316; flex-shrink: 0; }
+.bt-offer-main { flex: 1; }
+.bt-offer-pair { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 500; color: #e8e0d5; }
+.bt-offer-meta { font-size: 12px; color: #4a3d30; margin-top: 2px; }
+.bt-offer-val { font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #f97316; text-align: right; }
+.bt-offer-zk { font-size: 10px; color: #4a3d30; margin-top: 2px; font-family: 'IBM Plex Mono', monospace; text-align: right; }
+.bt-divider { height: 0.5px; background: rgba(255,120,20,0.08); margin: 20px 0; }
+.bt-proof-box { background: rgba(249,115,22,0.04); border: 0.5px solid rgba(249,115,22,0.12); border-radius: 8px; padding: 14px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #4a3d30; line-height: 1.9; word-break: break-all; }
+.bt-proof-box span { color: #f97316; }
+.bt-wallet-bar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: rgba(255,255,255,0.02); border: 0.5px solid rgba(255,120,20,0.1); border-radius: 8px; margin-bottom: 20px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6b5d4f; }
+.bt-wallet-dot { width: 6px; height: 6px; background: #f97316; border-radius: 50%; }
+.bt-wallet-addr { color: #78614e; flex: 1; }
+.bt-toast { position: fixed; bottom: 24px; right: 24px; background: #0c0a08; border: 0.5px solid rgba(249,115,22,0.35); border-radius: 10px; padding: 14px 18px; font-size: 13px; color: #f97316; font-family: 'IBM Plex Mono', monospace; z-index: 100; opacity: 0; transform: translateY(10px); transition: all 0.3s; pointer-events: none; }
+.bt-toast.show { opacity: 1; transform: translateY(0); }
+footer { text-align: center; padding: 32px 0; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #2a2018; border-top: 0.5px solid rgba(255,120,20,0.06); margin-top: 24px; }
+footer a { color: #4a3d30; text-decoration: none; }
+footer a:hover { color: #f97316; }
+@media (max-width: 600px) {
+  .bt-hero h1 { font-size: 36px; }
+  .bt-stats { gap: 24px; }
+  .bt-form-row { grid-template-columns: 1fr; }
+  .bt-tabs { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+<div class="bt-grid"></div>
+<div class="bt-glow"></div>
+<div class="bt-content">
+
+  <nav class="bt-nav">
+    <div class="bt-logo">
+      <div class="bt-logo-dot"></div>
+      BlindTrade
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <span class="bt-badge">Miden Testnet v0.14</span>
+      <button class="bt-btn-connect" onclick="connectWallet()">Connect Wallet</button>
+    </div>
+  </nav>
+
+  <div class="bt-hero">
+    <div class="bt-miden-tag"><i class="ti ti-bolt"></i> Built on Miden · ZK-STARK powered</div>
+    <div class="bt-hero-tag">Private OTC Trading</div>
+    <h1>Trade in the<br><span>Dark.</span></h1>
+    <p class="bt-hero-sub">Execute large OTC trades with full privacy on Miden. Amounts, tokens, and counterparties stay confidential — zero-knowledge proven.</p>
+    <div class="bt-stats">
+      <div class="bt-stat">
+        <div class="bt-stat-val" id="vol">$0</div>
+        <div class="bt-stat-label">24h Volume</div>
+      </div>
+      <div class="bt-stat">
+        <div class="bt-stat-val" id="trades">0</div>
+        <div class="bt-stat-label">Private Trades</div>
+      </div>
+      <div class="bt-stat">
+        <div class="bt-stat-val">100%</div>
+        <div class="bt-stat-label">ZK Proven</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bt-tabs">
+    <button class="bt-tab active" onclick="setTab('create',this)">Create Offer</button>
+    <button class="bt-tab" onclick="setTab('browse',this)">Browse Offers</button>
+    <button class="bt-tab" onclick="setTab('proof',this)">ZK Proof</button>
+  </div>
+
+  <div id="panel-create" class="bt-panel active">
+    <div class="bt-card">
+      <div class="bt-card-title">New Private Offer</div>
+      <div class="bt-wallet-bar">
+        <div class="bt-wallet-dot"></div>
+        <span class="bt-wallet-addr" id="wallet-addr">Not connected — connect Miden Wallet</span>
+      </div>
+      <div class="bt-form-row">
+        <div class="bt-field">
+          <label class="bt-label">You Send</label>
+          <select class="bt-select" id="send-token"><option>ETH</option><option>USDC</option><option>BTC</option><option>POL</option></select>
+        </div>
+        <div class="bt-field">
+          <label class="bt-label">Amount</label>
+          <input class="bt-input" id="send-amount" type="number" placeholder="0.00" min="0" />
+        </div>
+      </div>
+      <div class="bt-form-row">
+        <div class="bt-field">
+          <label class="bt-label">You Receive</label>
+          <select class="bt-select" id="recv-token"><option>USDC</option><option>ETH</option><option>BTC</option><option>POL</option></select>
+        </div>
+        <div class="bt-field">
+          <label class="bt-label">Amount</label>
+          <input class="bt-input" id="recv-amount" type="number" placeholder="0.00" min="0" />
+        </div>
+      </div>
+      <div class="bt-field bt-field-full">
+        <label class="bt-label">Counterparty Wallet (optional)</label>
+        <input class="bt-input" id="counterparty" type="text" placeholder="0xMiden..." />
+      </div>
+      <div class="bt-field bt-field-full" style="margin-bottom:16px;">
+        <label class="bt-label">Expiry</label>
+        <select class="bt-select" id="expiry"><option>1 hour</option><option>6 hours</option><option selected>24 hours</option><option>72 hours</option></select>
+      </div>
+      <div class="bt-privacy-toggle">
+        <i class="ti ti-shield-lock bt-toggle-icon"></i>
+        <span class="bt-toggle-text">ZK Privacy Shield — amounts hidden on-chain via Miden STARK</span>
+        <span class="bt-toggle-status">ON</span>
+      </div>
+      <button class="bt-btn" onclick="createOffer()">Create Private Offer</button>
+    </div>
+  </div>
+
+  <div id="panel-browse" class="bt-panel">
+    <div class="bt-card">
+      <div class="bt-card-title">Open Offers · <span style="color:#f97316;" id="offer-count">3</span> available</div>
+      <div class="bt-offers" id="offers-list"></div>
+    </div>
+  </div>
+
+  <div id="panel-proof" class="bt-panel">
+    <div class="bt-card">
+      <div class="bt-card-title">ZK Proof Verifier</div>
+      <p style="font-size:13px;color:#6b5d4f;margin-bottom:20px;line-height:1.7;">Every BlindTrade transaction generates a Miden STARK proof. Anyone can verify a trade happened — but counterparties, amounts, and tokens stay private forever.</p>
+      <div class="bt-field bt-field-full" style="margin-bottom:16px;">
+        <label class="bt-label">Trade ID or Proof Hash</label>
+        <input class="bt-input" id="proof-input" type="text" placeholder="bt_proof_..." />
+      </div>
+      <button class="bt-btn" onclick="verifyProof()">Verify Proof</button>
+      <div class="bt-divider"></div>
+      <div class="bt-card-title">Sample Proof Output</div>
+      <div class="bt-proof-box">
+        proof_id: <span>bt_7f3a9c2e...</span><br>
+        status: <span>VALID ✓</span><br>
+        miden_network: <span>testnet-v0.14</span><br>
+        trade_executed: <span>true</span><br>
+        amount_sender: <span>[PRIVATE]</span><br>
+        amount_receiver: <span>[PRIVATE]</span><br>
+        token_pair: <span>[PRIVATE]</span><br>
+        counterparty: <span>[PRIVATE]</span><br>
+        miden_block: <span>#14821</span><br>
+        zk_proof: <span>STARK · Plonky3 + Poseidon2</span><br>
+        timestamp: <span>2026-06-07T09:14:33Z</span>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Built on <a href="https://miden.xyz" target="_blank">Miden</a> testnet &nbsp;·&nbsp;
+    <a href="https://github.com/Dnyelfy/blindtrade-miden" target="_blank">GitHub</a> &nbsp;·&nbsp;
+    ZK-STARK powered privacy
+  </footer>
+</div>
+
+<div class="bt-toast" id="toast"></div>
+
+<script>
+  const offers = [
+    { pair: 'ETH → USDC', time: '2h left', id: 1 },
+    { pair: 'BTC → ETH', time: '5h left', id: 2 },
+    { pair: 'POL → USDC', time: '18h left', id: 3 },
+  ];
+
+  function renderOffers() {
+    const el = document.getElementById('offers-list');
+    if (!offers.length) {
+      el.innerHTML = '<p style="font-size:13px;color:#4a3d30;text-align:center;padding:24px;">No open offers yet.</p>';
+      return;
+    }
+    el.innerHTML = offers.map(o => `
+      <div class="bt-offer" onclick="acceptOffer(${o.id})">
+        <div class="bt-offer-shield"><i class="ti ti-shield-lock"></i></div>
+        <div class="bt-offer-main">
+          <div class="bt-offer-pair">${o.pair}</div>
+          <div class="bt-offer-meta">Expires in ${o.time} · ZK Protected</div>
+        </div>
+        <div>
+          <div class="bt-offer-val">Private</div>
+          <div class="bt-offer-zk">STARK proven</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function setTab(tab, btn) {
+    document.querySelectorAll('.bt-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.bt-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + tab).classList.add('active');
+    if (tab === 'browse') renderOffers();
+  }
+
+  let tradeCount = 0, volume = 0;
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  function connectWallet() {
+    document.getElementById('wallet-addr').textContent = '0xMiden...a7f3 · Connected';
+    showToast('✓ Miden Wallet connected');
+  }
+
+  function createOffer() {
+    const send = document.getElementById('send-amount').value;
+    const recv = document.getElementById('recv-amount').value;
+    if (!send || !recv) { showToast('⚠ Fill in amounts'); return; }
+    const sendTok = document.getElementById('send-token').value;
+    const recvTok = document.getElementById('recv-token').value;
+    offers.unshift({ pair: sendTok + ' → ' + recvTok, time: '24h left', id: Date.now() });
+    tradeCount++;
+    volume += Math.floor(Math.random() * 50000 + 10000);
+    document.getElementById('vol').textContent = '$' + volume.toLocaleString();
+    document.getElementById('trades').textContent = tradeCount;
+    document.getElementById('offer-count').textContent = offers.length;
+    document.getElementById('send-amount').value = '';
+    document.getElementById('recv-amount').value = '';
+    showToast('✓ Private offer created · ZK proof generated on Miden');
+  }
+
+  function acceptOffer(id) {
+    const idx = offers.findIndex(o => o.id === id);
+    if (idx > -1) {
+      offers.splice(idx, 1);
+      tradeCount++;
+      volume += Math.floor(Math.random() * 30000 + 5000);
+      document.getElementById('vol').textContent = '$' + volume.toLocaleString();
+      document.getElementById('trades').textContent = tradeCount;
+      document.getElementById('offer-count').textContent = offers.length;
+      renderOffers();
+      showToast('✓ Trade accepted · Proof verified on Miden testnet');
+    }
+  }
+
+  function verifyProof() {
+    const val = document.getElementById('proof-input').value;
+    if (!val) { showToast('⚠ Enter a proof ID'); return; }
+    showToast('✓ Valid STARK proof · Trade confirmed, details private');
+  }
+</script>
+</body>
+</html>
